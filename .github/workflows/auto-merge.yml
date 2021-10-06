@@ -18,7 +18,7 @@ jobs:
         git config user.email "rochet2+ci@post.com" && git config user.name "Rochet2"
         git remote add Trinity https://github.com/TrinityCore/TrinityCore.git
         git fetch Trinity 3.3.5
-        git merge -m "Merge TrinityCore 3.3.5 to ElunaTrinityWotlk [skip ci]" Trinity/3.3.5
+        git merge -m "Merge TrinityCore 3.3.5 to 3.3.5 [skip ci]" Trinity/3.3.5
         git status
     - name: Dependencies
       run: |
