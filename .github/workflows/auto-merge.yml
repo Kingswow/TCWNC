@@ -15,7 +15,7 @@ jobs:
     - name: Merge TC
       run: |
         git status
-        git config user.email "rochet2+ci@post.com" && git config user.name "Rochet2"
+        git config user.email "hossein.abavi@gmail.com" && git config user.name "Kingswow"
         git remote add Trinity https://github.com/TrinityCore/TrinityCore.git
         git fetch Trinity 3.3.5
         git merge -m "Merge TrinityCore 3.3.5 to 3.3.5 [skip ci]" Trinity/3.3.5
