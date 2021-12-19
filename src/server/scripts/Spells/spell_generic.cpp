@@ -33,6 +33,7 @@
 #include "Item.h"
 #include "LFGMgr.h"
 #include "Log.h"
+#include "ObjectMgr.h"
 #include "Pet.h"
 #include "ReputationMgr.h"
 #include "SkillDiscovery.h"
@@ -1733,6 +1734,48 @@ class spell_gen_feign_death_no_prevent_emotes : public AuraScript
     {
         OnEffectApply += AuraEffectApplyFn(spell_gen_feign_death_no_prevent_emotes::HandleEffectApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
         OnEffectRemove += AuraEffectRemoveFn(spell_gen_feign_death_no_prevent_emotes::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+enum FuriousRage
+{
+    EMOTE_FURIOUS_RAGE       = 19415,
+    EMOTE_EXHAUSTED          = 18368,
+    SPELL_EXHAUSTION         = 35492
+};
+
+// 35491 - Furious Rage
+class spell_gen_furious_rage : public AuraScript
+{
+    PrepareAuraScript(spell_gen_furious_rage);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_EXHAUSTION }) &&
+            sObjectMgr->GetBroadcastText(EMOTE_FURIOUS_RAGE) &&
+            sObjectMgr->GetBroadcastText(EMOTE_EXHAUSTED);
+    }
+
+    void AfterApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* target = GetTarget();
+        target->Unit::TextEmote(EMOTE_FURIOUS_RAGE, target, false);
+    }
+
+    void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (GetTargetApplication()->GetRemoveMode() != AURA_REMOVE_BY_EXPIRE)
+            return;
+
+        Unit* target = GetTarget();
+        target->Unit::TextEmote(EMOTE_EXHAUSTED, target, false);
+        target->CastSpell(target, SPELL_EXHAUSTION, true);
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_gen_furious_rage::AfterApply, EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_gen_furious_rage::AfterRemove, EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -3637,6 +3680,29 @@ class spell_gen_whisper_gulch_yogg_saron_whisper : public AuraScript
     }
 };
 
+class spell_gen_whisper_to_controller : public SpellScript
+{
+    PrepareSpellScript(spell_gen_whisper_to_controller);
+
+    bool Validate(SpellInfo const* spellInfo) override
+    {
+        return sObjectMgr->GetBroadcastText(uint32(spellInfo->GetEffect(EFFECT_0).CalcValue()));
+    }
+
+    void HandleScript(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* caster = GetCaster())
+            if (TempSummon* casterSummon = caster->ToTempSummon())
+                if (Player* target = casterSummon->GetSummonerUnit()->ToPlayer())
+                    casterSummon->Unit::Whisper(uint32(GetEffectValue()), target, false);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_gen_whisper_to_controller::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+    }
+};
+
 class spell_gen_eject_all_passengers : public SpellScript
 {
     PrepareSpellScript(spell_gen_eject_all_passengers);
@@ -4457,6 +4523,7 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_gen_feign_death_all_flags);
     RegisterSpellScript(spell_gen_feign_death_no_dyn_flag);
     RegisterSpellScript(spell_gen_feign_death_no_prevent_emotes);
+    RegisterSpellScript(spell_gen_furious_rage);
     RegisterSpellScript(spell_gen_5000_gold);
     RegisterSpellScript(spell_gen_gadgetzan_transporter_backfire);
     RegisterSpellScript(spell_gen_gift_of_naaru);
@@ -4528,6 +4595,7 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_gen_vendor_bark_trigger);
     RegisterSpellScript(spell_gen_wg_water);
     RegisterSpellScript(spell_gen_whisper_gulch_yogg_saron_whisper);
+    RegisterSpellScript(spell_gen_whisper_to_controller);
     RegisterSpellScript(spell_gen_eject_all_passengers);
     RegisterSpellScript(spell_gen_eject_passenger);
     RegisterSpellScriptWithArgs(spell_gen_eject_passenger_with_seatId, "spell_gen_eject_passenger_1", 0);
